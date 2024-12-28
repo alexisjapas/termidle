@@ -7,14 +7,42 @@ use ratatui::{
     widgets::{Block, Paragraph, Widget},
     Frame,
 };
-use crate::game::GameState;
+use crate::game::{GameState, GameStatus};
 
 #[derive(Debug, Default)]
 pub struct GameUI;
 
 impl GameUI {
     pub fn draw(&self, frame: &mut Frame, game: &GameState) {
-        frame.render_widget(GameWidget(game), frame.area());
+        match game.status() {
+            GameStatus::Playing => frame.render_widget(GameWidget(game), frame.area()),
+            GameStatus::Victory => frame.render_widget(VictoryWidget, frame.area()),
+            GameStatus::GameOver => frame.render_widget(GameOverWidget, frame.area()),
+        }
+    }
+}
+
+struct VictoryWidget;
+
+impl Widget for VictoryWidget {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let victory_text = Text::from("Victory! You reached max level!").green().bold();
+        Paragraph::new(victory_text)
+            .centered()
+            .block(Block::bordered())
+            .render(area, buf);
+    }
+}
+
+struct GameOverWidget;
+
+impl Widget for GameOverWidget {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let game_over_text = Text::from("Game Over!").red().bold();
+        Paragraph::new(game_over_text)
+            .centered()
+            .block(Block::bordered())
+            .render(area, buf);
     }
 }
 

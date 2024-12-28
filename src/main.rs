@@ -20,7 +20,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            game: GameState::default(),
+            game: GameState::new(1, 100, 10),
             ui: GameUI::default(),
             exit: false,
         }
