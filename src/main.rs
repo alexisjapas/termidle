@@ -1,4 +1,4 @@
-use std::{io, thread, time::Duration};
+use std::{io, time::{Duration, Instant}};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     buffer::Buffer,
@@ -10,31 +10,44 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-fn main() -> io::Result<()> {
-    // Init
-    let mut terminal = ratatui::init();
-    
-    // Run
-    let app_result = App::default().run(&mut terminal);
-    
-    // Restore
-    ratatui::restore();
-    app_result
-}
+const TICK_RATE: Duration = Duration::from_millis(100); // Logic update rate
+const FRAME_RATE: Duration = Duration::from_millis(10);  // ~100 fps
+const PLAYER_MAX_LEVEL: u8 = 100;
 
 #[derive(Debug, Default)]
 pub struct App {
-    counter: u8,
+    player_level: u8,
     exit: bool,
 }
 
 impl App {
     // Run until user quit
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        let mut last_tick = Instant::now();
+        let mut last_render = Instant::now();
+        
         while !self.exit {
-            terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
-            thread::sleep(Duration::from_millis(500));
+            // Only render frame if enough time has passed
+            if last_render.elapsed() >= FRAME_RATE {
+                terminal.draw(|frame| self.draw(frame))?;
+                last_render = Instant::now();
+            }
+            
+            // Time management for game logic
+            let timeout = TICK_RATE
+                .checked_sub(last_tick.elapsed())
+                .unwrap_or_else(|| Duration::from_secs(0));
+            
+            // Poll for events with a timeout
+            if event::poll(timeout)? {
+                self.handle_events()?;
+            }
+            
+            // Update game state if it's time for a new tick
+            if last_tick.elapsed() >= TICK_RATE {
+                self.level_up();
+                last_tick = Instant::now();
+            }          
         }
         Ok(())
     }
@@ -56,22 +69,16 @@ impl App {
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
-            KeyCode::Left => self.decrement_counter(),
-            KeyCode::Right => self.increment_counter(),
             _ => {}
         }
     }
     
+    fn level_up(&mut self) {
+        self.player_level += 1;
+    }
+    
     fn exit(&mut self) {
         self.exit = true;
-    }
-    
-    fn increment_counter(&mut self) {
-        self.counter += 1;
-    }
-    
-    fn decrement_counter(&mut self) {
-        self.counter -= 1;
     }
 }
 
@@ -79,10 +86,6 @@ impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let title = Line::from("  TERMIDLE ".bold());
         let instructions = Line::from(vec![
-            // " Decrement ".into(),
-            // "<Left>".blue().bold(),
-            // " Increment ".into(),
-            // "<Right>".blue().bold(),
             "  Quit ".into(),
             "<Q> ".blue().bold(),
         ]);
@@ -92,8 +95,8 @@ impl Widget for &App {
             .border_set(border::THICK);
         
         let counter_text = Text::from(vec![Line::from(vec![
-            "Value: ".into(),
-            self.counter.to_string().yellow(),
+            "Level: ".into(),
+            self.player_level.to_string().yellow(),
         ])]);
         
         Paragraph::new(counter_text)
@@ -103,49 +106,9 @@ impl Widget for &App {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ratatui::style::Style;
-
-    #[test]
-    fn render() {
-        let app = App::default();
-        let mut buf = Buffer::empty(Rect::new(0, 0, 50, 4));
-
-        app.render(buf.area, &mut buf);
-
-        let mut expected = Buffer::with_lines(vec![
-            "┏━━━━━━━━━━━━━ Counter App Tutorial ━━━━━━━━━━━━━┓",
-            "┃                    Value: 0                    ┃",
-            "┃                                                ┃",
-            "┗━ Decrement <Left> Increment <Right> Quit <Q> ━━┛",
-        ]);
-        let title_style = Style::new().bold();
-        let counter_style = Style::new().yellow();
-        let key_style = Style::new().blue().bold();
-        expected.set_style(Rect::new(14, 0, 22, 1), title_style);
-        expected.set_style(Rect::new(28, 1, 1, 1), counter_style);
-        expected.set_style(Rect::new(13, 3, 6, 1), key_style);
-        expected.set_style(Rect::new(30, 3, 7, 1), key_style);
-        expected.set_style(Rect::new(43, 3, 4, 1), key_style);
-
-        assert_eq!(buf, expected);
-    }
-    
-    #[test]
-    fn handle_key_event() -> io::Result<()> {
-        let mut app = App::default();
-        app.handle_key_event(KeyCode::Right.into());
-        assert_eq!(app.counter, 1);
-
-        app.handle_key_event(KeyCode::Left.into());
-        assert_eq!(app.counter, 0);
-
-        let mut app = App::default();
-        app.handle_key_event(KeyCode::Char('q').into());
-        assert!(app.exit);
-
-        Ok(())
-    }
+fn main() -> io::Result<()> {
+    let mut terminal = ratatui::init();
+    let app_result = App::default().run(&mut terminal);
+    ratatui::restore();
+    app_result
 }
