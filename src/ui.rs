@@ -1,8 +1,7 @@
 use ratatui::{
     buffer::Buffer,
-    layout::Rect,
+    layout::{Rect, Layout, Direction, Constraint},
     style::Stylize,
-    symbols::border,
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget},
     Frame,
@@ -50,24 +49,46 @@ struct GameWidget<'a>(&'a GameState);
 
 impl Widget for GameWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from("  TERMIDLE ".bold());
-        let instructions = Line::from(vec![
-            "  Quit ".into(),
-            "<Q> ".blue().bold(),
+        // Main layout split
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(30),
+                Constraint::Percentage(70),
+            ])
+            .split(area);
+        
+        // Render player stats
+        let stats_text = Text::from(vec![
+            Line::from("Player Stats").bold(),
+            Line::from(""),
+            Line::from(vec![
+                "Level: ".into(),
+                self.0.player_level().to_string().yellow(),
+            ]),
+            Line::from(vec![
+                "Health: ".into(),
+                self.0.player_health().to_string().green(),
+            ]),
+            Line::from(vec![
+                "Attack: ".into(),
+                self.0.player_attack().to_string().red(),
+            ]),
         ]);
-        let block = Block::bordered()
-            .title(title.centered())
-            .title_bottom(instructions.centered())
-            .border_set(border::THICK);
         
-        let counter_text = Text::from(vec![Line::from(vec![
-            "Level: ".into(),
-            self.0.player_level().to_string().yellow(),
-        ])]);
+        Paragraph::new(stats_text)
+            .block(Block::bordered().title("Player"))
+            .render(chunks[0], buf);
         
-        Paragraph::new(counter_text)
-            .centered()
-            .block(block)
-            .render(area, buf);
+        // Render fight log
+        let fight_text = Text::from(vec![
+            Line::from("Combat Log").bold(),
+            Line::from(""),
+            // todo
+        ]);
+
+        Paragraph::new(fight_text)
+            .block(Block::bordered().title("Combat"))
+            .render(chunks[1], buf);
     }
 }
