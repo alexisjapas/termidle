@@ -58,7 +58,7 @@ impl Widget for GameWidget<'_> {
         let mut log_lines = vec![];
         for log in self.0.logs() {
             let colored_line = match log.log_type {
-                LogType::System => Line::from(log.message.clone()).yellow(),
+                LogType::System => Line::from(log.message.clone()).yellow().bold(),
                 LogType::Status => Line::from(log.message.clone()).blue(),
                 LogType::Fight => Line::from(log.message.clone()).red(),
             };

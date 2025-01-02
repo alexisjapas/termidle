@@ -66,17 +66,21 @@ impl GameState {
     }
     
     pub fn update(&mut self) {
-        let mut enemy = Enemy::new(11, 10);
-        
-        if self.fight(&mut enemy) {
-            self.add_log(LogType::Fight, "Won the fight!");
-            self.level_up(1);
-            if self.player_level >= PLAYER_MAX_LEVEL {
-                self.status = GameStatus::Victory;
+        if self.status() == &GameStatus::Playing {
+            let mut enemy = Enemy::new(11, 10);
+            
+            if self.fight(&mut enemy) {
+                self.add_log(LogType::Fight, "Won the fight!");
+                self.level_up(1);
+                if self.player_level >= PLAYER_MAX_LEVEL {
+                    self.status = GameStatus::Victory;
+                    self.add_log(LogType::System, "Victory!");
+                }
+            } else {
+                self.add_log(LogType::Fight, "Lost the fight!");
+                self.status = GameStatus::GameOver;
+                self.add_log(LogType::System, "Game Over!");
             }
-        } else {
-            self.add_log(LogType::Fight, "Lost the fight!");
-            self.status = GameStatus::GameOver;
         }
     }
     
