@@ -1,1 +1,55 @@
+name: Release Builds
 
+on:
+  release:
+    types: [created]
+
+jobs:
+  release:
+    name: Build Release - ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary_path: target/release
+            asset_name: app-linux-amd64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_path: target/release
+            asset_name: app-windows-amd64.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary_path: target/release
+            asset_name: app-macos-amd64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - name: Build Binary
+        run: cargo build --release --target ${{ matrix.platform.target }}
+
+      - name: Prepare Asset
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform.os }}" = "windows-latest" ]; then
+            cp "${{ matrix.platform.binary_path }}/termidle.exe" "${{ matrix.platform.asset_name }}"
+          else
+            cp "${{ matrix.platform.binary_path }}/termidle" "${{ matrix.platform.asset_name }}"
+          fi
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ matrix.platform.asset_name }}
+          asset_name: ${{ matrix.platform.asset_name }}
+          asset_content_type: application/octet-stream
