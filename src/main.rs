@@ -8,7 +8,7 @@ mod ui;
 use game::GameState;
 use ui::GameUI;
 
-const TICK_RATE: Duration = Duration::from_millis(1000);
+const TICK_RATE: Duration = Duration::from_millis(100);
 const FRAME_RATE: Duration = Duration::from_millis(10);
 
 pub struct App {

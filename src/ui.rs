@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Rect, Layout, Direction, Constraint},
-    style::Stylize,
+    style::{Stylize, Style, Color},
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget},
     Frame,
@@ -13,35 +13,7 @@ pub struct GameUI;
 
 impl GameUI {
     pub fn draw(&self, frame: &mut Frame, game: &GameState) {
-        match game.status() {
-            GameStatus::Playing => frame.render_widget(GameWidget(game), frame.area()),
-            GameStatus::Victory => frame.render_widget(VictoryWidget, frame.area()),
-            GameStatus::GameOver => frame.render_widget(GameOverWidget, frame.area()),
-        }
-    }
-}
-
-struct VictoryWidget;
-
-impl Widget for VictoryWidget {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let victory_text = Text::from("Victory! You reached max level!").green().bold();
-        Paragraph::new(victory_text)
-            .centered()
-            .block(Block::bordered())
-            .render(area, buf);
-    }
-}
-
-struct GameOverWidget;
-
-impl Widget for GameOverWidget {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let game_over_text = Text::from("Game Over!").red().bold();
-        Paragraph::new(game_over_text)
-            .centered()
-            .block(Block::bordered())
-            .render(area, buf);
+        frame.render_widget(GameWidget(game), frame.area());
     }
 }
 
@@ -60,8 +32,6 @@ impl Widget for GameWidget<'_> {
         
         // Render player stats
         let stats_text = Text::from(vec![
-            Line::from("Player Stats").bold(),
-            Line::from(""),
             Line::from(vec![
                 "Level: ".into(),
                 self.0.player_level().to_string().yellow(),
@@ -77,7 +47,11 @@ impl Widget for GameWidget<'_> {
         ]);
         
         Paragraph::new(stats_text)
-            .block(Block::bordered().title(" Player"))
+            .block(Block::bordered().title(" Player").border_style(Style::default().fg(match self.0.status() {
+                GameStatus::Playing => Color::Reset,
+                GameStatus::Victory => Color::Green,
+                GameStatus::GameOver => Color::Red,
+            })))
             .render(chunks[0], buf);
         
         // Render fight log
@@ -94,7 +68,11 @@ impl Widget for GameWidget<'_> {
         let log_text = Text::from(log_lines);
 
         Paragraph::new(log_text)
-            .block(Block::bordered().title(" Combat"))
+            .block(Block::bordered().title(" Combat").border_style(Style::default().fg(match self.0.status() {
+                GameStatus::Playing => Color::Reset,
+                GameStatus::Victory => Color::Green,
+                GameStatus::GameOver => Color::Red,
+            })))
             .render(chunks[1], buf);
     }
 }
