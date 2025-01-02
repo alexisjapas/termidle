@@ -1,6 +1,9 @@
-use std::{io, time::{Duration, Instant}};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
+use std::{
+    io,
+    time::{Duration, Instant},
+};
 
 mod game;
 mod ui;
@@ -31,33 +34,33 @@ impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         let mut last_tick = Instant::now();
         let mut last_render = Instant::now();
-        
+
         while !self.exit {
             if last_render.elapsed() >= FRAME_RATE {
                 terminal.draw(|frame| self.draw(frame))?;
                 last_render = Instant::now();
             }
-            
+
             let timeout = TICK_RATE
                 .checked_sub(last_tick.elapsed())
                 .unwrap_or_else(|| Duration::from_secs(0));
-            
+
             if event::poll(timeout)? {
                 self.handle_events()?;
             }
-            
+
             if last_tick.elapsed() >= TICK_RATE {
                 self.game.update();
                 last_tick = Instant::now();
-            }          
+            }
         }
         Ok(())
     }
-    
+
     fn draw(&self, frame: &mut Frame) {
         self.ui.draw(frame, &self.game);
     }
-    
+
     fn handle_events(&mut self) -> io::Result<()> {
         match event::read()? {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
@@ -67,14 +70,14 @@ impl App {
         };
         Ok(())
     }
-    
+
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
             _ => {}
         }
     }
-    
+
     fn exit(&mut self) {
         self.exit = true;
     }

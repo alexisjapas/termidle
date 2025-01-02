@@ -1,12 +1,12 @@
+use crate::game::{GameState, GameStatus, LogType};
 use ratatui::{
     buffer::Buffer,
-    layout::{Rect, Layout, Direction, Constraint},
-    style::{Stylize, Style, Color},
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Style, Stylize},
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget},
     Frame,
 };
-use crate::game::{GameState, GameStatus, LogType};
 
 #[derive(Debug, Default)]
 pub struct GameUI;
@@ -24,12 +24,9 @@ impl Widget for GameWidget<'_> {
         // Main layout split
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(30),
-                Constraint::Percentage(70),
-            ])
+            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
             .split(area);
-        
+
         // Render player stats
         let stats_text = Text::from(vec![
             Line::from(vec![
@@ -45,15 +42,19 @@ impl Widget for GameWidget<'_> {
                 self.0.player_attack().to_string().red(),
             ]),
         ]);
-        
+
         Paragraph::new(stats_text)
-            .block(Block::bordered().title(" Player").border_style(Style::default().fg(match self.0.status() {
-                GameStatus::Playing => Color::Reset,
-                GameStatus::Victory => Color::Green,
-                GameStatus::GameOver => Color::Red,
-            })))
+            .block(
+                Block::bordered()
+                    .title(" Player")
+                    .border_style(Style::default().fg(match self.0.status() {
+                        GameStatus::Playing => Color::Reset,
+                        GameStatus::Victory => Color::Green,
+                        GameStatus::GameOver => Color::Red,
+                    })),
+            )
             .render(chunks[0], buf);
-        
+
         // Render fight log
         let mut log_lines = vec![];
         for log in self.0.logs() {
@@ -64,15 +65,19 @@ impl Widget for GameWidget<'_> {
             };
             log_lines.push(colored_line);
         }
-        
+
         let log_text = Text::from(log_lines);
 
         Paragraph::new(log_text)
-            .block(Block::bordered().title(" Combat").border_style(Style::default().fg(match self.0.status() {
-                GameStatus::Playing => Color::Reset,
-                GameStatus::Victory => Color::Green,
-                GameStatus::GameOver => Color::Red,
-            })))
+            .block(
+                Block::bordered()
+                    .title(" Combat")
+                    .border_style(Style::default().fg(match self.0.status() {
+                        GameStatus::Playing => Color::Reset,
+                        GameStatus::Victory => Color::Green,
+                        GameStatus::GameOver => Color::Red,
+                    })),
+            )
             .render(chunks[1], buf);
     }
 }
