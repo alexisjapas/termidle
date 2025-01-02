@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Paragraph, Widget},
     Frame,
 };
-use crate::game::{GameState, GameStatus};
+use crate::game::{GameState, GameStatus, LogType};
 
 #[derive(Debug, Default)]
 pub struct GameUI;
@@ -77,18 +77,24 @@ impl Widget for GameWidget<'_> {
         ]);
         
         Paragraph::new(stats_text)
-            .block(Block::bordered().title("Player"))
+            .block(Block::bordered().title(" Player"))
             .render(chunks[0], buf);
         
         // Render fight log
-        let fight_text = Text::from(vec![
-            Line::from("Combat Log").bold(),
-            Line::from(""),
-            // todo
-        ]);
+        let mut log_lines = vec![];
+        for log in self.0.logs() {
+            let colored_line = match log.log_type {
+                LogType::System => Line::from(log.message.clone()).yellow(),
+                LogType::Status => Line::from(log.message.clone()).blue(),
+                LogType::Fight => Line::from(log.message.clone()).red(),
+            };
+            log_lines.push(colored_line);
+        }
+        
+        let log_text = Text::from(log_lines);
 
-        Paragraph::new(fight_text)
-            .block(Block::bordered().title("Combat"))
+        Paragraph::new(log_text)
+            .block(Block::bordered().title(" Combat"))
             .render(chunks[1], buf);
     }
 }
