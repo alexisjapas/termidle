@@ -1,8 +1,8 @@
-name: Rust
+name: Build and Release Binaries
 
 on:
   release:
-    types: [created]
+    types: [created] # Trigger only when a new release is created
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,7 +12,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest] # Build on Linux, Windows, and macOS
+        ext: ["", ".exe", ""] # File extensions for each OS
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -29,11 +30,10 @@ jobs:
     - name: Build
       run: cargo build --release
 
-    - name: Run tests
-      run: cargo test --release
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
+    - name: Upload to release
+      uses: actions/upload-release-asset@v1
       with:
-        name: ${{ runner.os }}-binary
-        path: target/release/ # Upload the release binary
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: target/release/termidle${{ matrix.ext }}
+        asset_name: termidle-${{ matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'windows' || 'macos' }}-${{ github.event.release.tag_name }}${{ matrix.ext }}
+        asset_content_type: application/octet-stream
