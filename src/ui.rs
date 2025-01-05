@@ -59,7 +59,7 @@ impl Widget for GameWidget<'_> {
                 Block::bordered()
                     .title(" Player ")
                     .border_style(Style::default().fg(match self.0.status() {
-                        GameStatus::PlayerSelection => Color::Gray,
+                        GameStatus::PlayerSelection => Color::Reset,
                         GameStatus::Playing => Color::Reset,
                         GameStatus::Victory => Color::Green,
                         GameStatus::GameOver => Color::Red,
@@ -71,24 +71,43 @@ impl Widget for GameWidget<'_> {
         let mut selection_lines = vec![];
         for (i, weapon) in self.0.weapons().iter().enumerate() {
             let style = if i == self.0.current_selection() {
-                Style::default().bold()
+                Style::default().bold().bg(Color::Yellow).fg(Color::Black)
             } else {
                 Style::default()
             };
             selection_lines.push(Line::styled(weapon.name().to_string(), style));
         }
-        Paragraph::new(Text::from(selection_lines))
-            .block(
-                Block::bordered()
-                    .title(" Weapon selection ")
-                    .border_style(Style::default().fg(match self.0.status() {
-                        GameStatus::PlayerSelection => Color::Gray,
-                        GameStatus::Playing => Color::Reset,
-                        GameStatus::Victory => Color::Green,
-                        GameStatus::GameOver => Color::Red,
-                    })),
-            )
-            .render(player_chunks[1], buf);
+
+        let enemy_lines = match self.0.enemy() {
+            Some(enemy) => Text::from(vec![
+                Line::from(vec!["Health: ".into(), enemy.health().to_string().green()]),
+                Line::from(vec!["Attack: ".into(), enemy.attack().to_string().red()]),
+            ]),
+            None => Text::from("No enemy"),
+        };
+
+        Paragraph::new(match self.0.status() {
+            GameStatus::PlayerSelection => Text::from(selection_lines),
+            GameStatus::Playing => enemy_lines,
+            GameStatus::Victory => Text::from(vec![Line::from("".to_string())]),
+            GameStatus::GameOver => Text::from(vec![Line::from("".to_string())]),
+        })
+        .block(
+            Block::bordered()
+                .title(match self.0.status() {
+                    GameStatus::PlayerSelection => " Select an option ",
+                    GameStatus::Playing => " Current enemy ",
+                    GameStatus::Victory => " Menu ",
+                    GameStatus::GameOver => " Menu ",
+                })
+                .border_style(Style::default().fg(match self.0.status() {
+                    GameStatus::PlayerSelection => Color::Yellow,
+                    GameStatus::Playing => Color::Reset,
+                    GameStatus::Victory => Color::Green,
+                    GameStatus::GameOver => Color::Red,
+                })),
+        )
+        .render(player_chunks[1], buf);
 
         // Render fight log
         let mut log_lines = vec![];
@@ -108,8 +127,8 @@ impl Widget for GameWidget<'_> {
                 Block::bordered()
                     .title(" Logs history ")
                     .border_style(Style::default().fg(match self.0.status() {
-                        GameStatus::PlayerSelection => Color::Gray,
-                        GameStatus::Playing => Color::Reset,
+                        GameStatus::PlayerSelection => Color::Reset,
+                        GameStatus::Playing => Color::Yellow,
                         GameStatus::Victory => Color::Green,
                         GameStatus::GameOver => Color::Red,
                     })),

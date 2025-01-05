@@ -51,6 +51,7 @@ pub enum GameStatus {
     GameOver,
 }
 
+#[derive(Debug, Clone)]
 pub struct Enemy {
     health: u8,
     attack: u8,
@@ -65,6 +66,7 @@ pub struct GameState {
     logs: Vec<LogEntry>,
     weapons: Vec<Weapon>,
     current_selection: usize,
+    enemy: Option<Enemy>,
 }
 
 impl Enemy {
@@ -74,6 +76,14 @@ impl Enemy {
             health: initial_health,
             attack: initial_attack,
         }
+    }
+
+    pub fn health(&self) -> u8 {
+        self.health
+    }
+
+    pub fn attack(&self) -> u8 {
+        self.attack
     }
 }
 
@@ -88,6 +98,7 @@ impl GameState {
             logs: Vec::new(),
             weapons: vec![Weapon::Axe, Weapon::Bow, Weapon::Sword],
             current_selection: 0,
+            enemy: None,
         };
         state.add_log(LogType::System, "Game started");
         state
@@ -125,9 +136,9 @@ impl GameState {
 
     pub fn update(&mut self) {
         if self.status() == &GameStatus::Playing {
-            let mut enemy = Enemy::new(18, 10);
+            self.enemy = Some(Enemy::new(28, 10));
 
-            if self.fight(&mut enemy) {
+            if self.fight() {
                 self.add_log(LogType::Status, "Won the fight!");
                 self.level_up(1);
                 if self.player_level >= PLAYER_MAX_LEVEL {
@@ -150,29 +161,42 @@ impl GameState {
         );
     }
 
-    pub fn fight(&mut self, enemy: &mut Enemy) -> bool {
+    pub fn fight(&mut self) -> bool {
+        if self.enemy.is_none() {
+            return true;
+        }
         loop {
-            enemy.health = enemy
-                .health
-                .saturating_sub(self.player_attack + self.player_weapon.damages());
+            let (enemy_health, enemy_attack) = if let Some(enemy) = &self.enemy {
+                (enemy.health, enemy.attack)
+            } else {
+                return true;
+            };
+
+            // Player attacks
+            let player_damage = self.player_attack + self.player_weapon.damages();
+            let new_enemy_health = enemy_health.saturating_sub(player_damage);
+
+            if let Some(enemy) = &mut self.enemy {
+                enemy.health = new_enemy_health;
+            }
             self.add_log(
                 LogType::Fight,
                 &format!(
                     "You attack the enemy by {} => Enemy remaining hp is {}",
-                    self.player_attack + self.player_weapon.damages(),
-                    enemy.health
+                    player_damage, new_enemy_health
                 ),
             );
-            if enemy.health == 0 {
+            if new_enemy_health == 0 {
                 return true;
             }
 
-            self.player_health = self.player_health.saturating_sub(enemy.attack);
+            // Enemy attacks
+            self.player_health = self.player_health.saturating_sub(enemy_attack);
             self.add_log(
                 LogType::Fight,
                 &format!(
                     "The enemy attacks you by {} => Your remaining hp is {}",
-                    enemy.attack, self.player_health
+                    enemy_attack, self.player_health
                 ),
             );
             if self.player_health == 0 {
@@ -213,5 +237,9 @@ impl GameState {
 
     pub fn player_weapon(&self) -> Weapon {
         self.player_weapon
+    }
+
+    pub fn enemy(&self) -> Option<&Enemy> {
+        self.enemy.as_ref()
     }
 }
