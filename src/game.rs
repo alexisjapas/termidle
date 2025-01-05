@@ -2,6 +2,34 @@ use std::cmp;
 
 pub const PLAYER_MAX_LEVEL: u8 = 100;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Weapon {
+    Hands,
+    Axe,
+    Bow,
+    Sword,
+}
+
+impl Weapon {
+    pub fn name(&self) -> &str {
+        match self {
+            Weapon::Hands => "Hands",
+            Weapon::Axe => "Axe",
+            Weapon::Bow => "Bow",
+            Weapon::Sword => "Sword",
+        }
+    }
+
+    pub fn damages(&self) -> u8 {
+        match self {
+            Weapon::Hands => 0,
+            Weapon::Axe => 20,
+            Weapon::Bow => 13,
+            Weapon::Sword => 16,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum LogType {
     System,
@@ -17,6 +45,7 @@ pub struct LogEntry {
 
 #[derive(Debug, PartialEq)]
 pub enum GameStatus {
+    PlayerSelection,
     Playing,
     Victory,
     GameOver,
@@ -31,8 +60,11 @@ pub struct GameState {
     player_level: u8,
     player_health: u8,
     player_attack: u8,
+    player_weapon: Weapon,
     status: GameStatus,
     logs: Vec<LogEntry>,
+    weapons: Vec<Weapon>,
+    current_selection: usize,
 }
 
 impl Enemy {
@@ -51,8 +83,11 @@ impl GameState {
             player_level: initial_level,
             player_health: initial_health,
             player_attack: initial_attack,
-            status: GameStatus::Playing,
+            player_weapon: Weapon::Hands,
+            status: GameStatus::PlayerSelection,
             logs: Vec::new(),
+            weapons: vec![Weapon::Axe, Weapon::Bow, Weapon::Sword],
+            current_selection: 0,
         };
         state.add_log(LogType::System, "Game started");
         state
@@ -68,9 +103,29 @@ impl GameState {
         );
     }
 
+    pub fn increase_selection(&mut self) {
+        if self.status == GameStatus::PlayerSelection {
+            self.current_selection =
+                (self.current_selection + self.weapons.len() - 1) % self.weapons.len();
+        }
+    }
+
+    pub fn decrease_selection(&mut self) {
+        if self.status == GameStatus::PlayerSelection {
+            self.current_selection = (self.current_selection + 1) % self.weapons.len();
+        }
+    }
+
+    pub fn validate_selection(&mut self) {
+        if self.status == GameStatus::PlayerSelection {
+            self.player_weapon = self.weapons[self.current_selection];
+            self.status = GameStatus::Playing;
+        }
+    }
+
     pub fn update(&mut self) {
         if self.status() == &GameStatus::Playing {
-            let mut enemy = Enemy::new(11, 10);
+            let mut enemy = Enemy::new(18, 10);
 
             if self.fight(&mut enemy) {
                 self.add_log(LogType::Status, "Won the fight!");
@@ -97,12 +152,15 @@ impl GameState {
 
     pub fn fight(&mut self, enemy: &mut Enemy) -> bool {
         loop {
-            enemy.health = enemy.health.saturating_sub(self.player_attack);
+            enemy.health = enemy
+                .health
+                .saturating_sub(self.player_attack + self.player_weapon.damages());
             self.add_log(
                 LogType::Fight,
                 &format!(
                     "You attack the enemy by {} => Enemy remaining hp is {}",
-                    self.player_attack, enemy.health
+                    self.player_attack + self.player_weapon.damages(),
+                    enemy.health
                 ),
             );
             if enemy.health == 0 {
@@ -143,5 +201,17 @@ impl GameState {
 
     pub fn player_attack(&self) -> u8 {
         self.player_attack
+    }
+
+    pub fn weapons(&self) -> &[Weapon] {
+        &self.weapons
+    }
+
+    pub fn current_selection(&self) -> usize {
+        self.current_selection
+    }
+
+    pub fn player_weapon(&self) -> Weapon {
+        self.player_weapon
     }
 }

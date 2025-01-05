@@ -23,7 +23,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            game: GameState::new(1, 100, 10),
+            game: GameState::new(1, 100, 1),
             ui: GameUI::default(),
             exit: false,
         }
@@ -74,6 +74,15 @@ impl App {
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
+            KeyCode::Up => {
+                self.game.increase_selection();
+            }
+            KeyCode::Down => {
+                self.game.decrease_selection();
+            }
+            KeyCode::Enter => {
+                self.game.validate_selection();
+            }
             _ => {}
         }
     }
